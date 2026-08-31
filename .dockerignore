@@ -1,0 +1,7 @@
+.git
+.github
+dist
+*.md
+!PLAN.md
+routes.d
+payloads

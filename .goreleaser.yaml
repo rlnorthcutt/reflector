@@ -1,0 +1,69 @@
+version: 2
+
+project_name: reflector
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: reflector
+    main: ./cmd/reflector
+    binary: reflector
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/rlnorthcutt/reflector/internal/identity.Version={{.Version}}
+
+archives:
+  - id: reflector
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - PLAN.md
+      - LICENSE*
+      - examples/**/*
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+homebrew_casks:
+  - name: reflector
+    repository:
+      owner: rlnorthcutt
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    binaries:
+      - reflector
+    homepage: "https://github.com/rlnorthcutt/reflector"
+    description: "Identity-aware HTTP echo server for load-balancer demos and testing"
+
+release:
+  github:
+    owner: rlnorthcutt
+    name: reflector
+  prerelease: auto

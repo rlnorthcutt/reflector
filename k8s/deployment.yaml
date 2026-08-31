@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reflector
+  labels:
+    app: reflector
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: reflector
+  template:
+    metadata:
+      labels:
+        app: reflector
+    spec:
+      containers:
+        - name: reflector
+          image: ghcr.io/rlnorthcutt/reflector:latest
+          # IfNotPresent so a locally built/kind-loaded image (the usual
+          # way to try this example) is used as-is; still pulls normally
+          # for anyone deploying the real published tag.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: admin
+              containerPort: 8081
+          # Kubernetes sets each container's hostname to its pod name by
+          # default, and reflector reports os.Hostname() in every
+          # response — no --hostname-override needed to see which pod
+          # served a given request, which is the whole point when
+          # demoing load balancing across these replicas.
+          volumeMounts:
+            - name: routes
+              mountPath: /app/routes.d
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: routes
+          configMap:
+            name: reflector-routes
