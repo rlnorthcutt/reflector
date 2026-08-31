@@ -35,12 +35,11 @@ spec:
             - name: routes
               mountPath: /app/routes.d
               readOnly: true
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 2
-            periodSeconds: 5
+          # No livenessProbe: /healthz and /readyz share the same
+          # admin-toggleable health flag (POST /admin/health/down), so
+          # wiring liveness to it too would make kubelet restart the pod
+          # when that flag flips instead of just draining traffic — the
+          # opposite of the graceful-failover behavior this demo wants.
           readinessProbe:
             httpGet:
               path: /readyz
