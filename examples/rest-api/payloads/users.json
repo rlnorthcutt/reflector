@@ -1,0 +1,7 @@
+{
+  "users": [
+    { "id": "1", "name": "Ada Lovelace", "role": "admin" },
+    { "id": "2", "name": "Grace Hopper", "role": "operator" },
+    { "id": "3", "name": "Katherine Johnson", "role": "viewer" }
+  ]
+}

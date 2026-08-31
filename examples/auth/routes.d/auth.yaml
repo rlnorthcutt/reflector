@@ -1,0 +1,12 @@
+# auth preset: a bearer-token-gated endpoint returning 401 without
+# credentials, for auth-header-forwarding demos.
+routes:
+  - path: /api/secure
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body: |
+        {"message": "authenticated", "served_by": "{{ .Hostname }}"}
+      auth: bearer

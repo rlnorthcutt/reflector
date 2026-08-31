@@ -22,6 +22,15 @@ func TestParseDefaults(t *testing.T) {
 	if cfg.TCPIdleTimeout != defaultTCPIdleTimeout {
 		t.Errorf("TCPIdleTimeout = %v, want %v", cfg.TCPIdleTimeout, defaultTCPIdleTimeout)
 	}
+	if cfg.RoutesDir != "routes.d" {
+		t.Errorf("RoutesDir = %q, want routes.d", cfg.RoutesDir)
+	}
+	if cfg.Preset != "" {
+		t.Errorf("Preset = %q, want empty", cfg.Preset)
+	}
+	if cfg.StrictBuiltins {
+		t.Error("StrictBuiltins = true, want false")
+	}
 }
 
 func TestParseOverrides(t *testing.T) {
@@ -33,6 +42,9 @@ func TestParseOverrides(t *testing.T) {
 		"--tcp-port", "9091",
 		"--tcp-banner",
 		"--tcp-idle-timeout", "30s",
+		"--routes-dir", "custom-routes",
+		"--preset", "rest-api,flaky",
+		"--strict-builtins",
 	})
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
@@ -42,6 +54,9 @@ func TestParseOverrides(t *testing.T) {
 	}
 	if cfg.TCPPort != 9091 || !cfg.TCPBanner || cfg.TCPIdleTimeout != 30*time.Second {
 		t.Errorf("cfg tcp fields = %+v, unexpected values", cfg)
+	}
+	if cfg.RoutesDir != "custom-routes" || cfg.Preset != "rest-api,flaky" || !cfg.StrictBuiltins {
+		t.Errorf("cfg route fields = %+v, unexpected values", cfg)
 	}
 }
 

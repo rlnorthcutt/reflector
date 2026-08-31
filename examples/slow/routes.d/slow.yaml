@@ -1,0 +1,18 @@
+# slow preset: endpoints with latency and jitter, for timeout and
+# slow-backend demos.
+routes:
+  - path: /slow-api
+    method: GET
+    response:
+      status: 200
+      body: |
+        {"status": "ok", "served_by": "{{ .Hostname }}", "served_at": "{{ .Timestamp }}"}
+      delay: 800ms±400ms
+
+  - path: /slow-api/report
+    method: GET
+    response:
+      status: 200
+      body: |
+        {"report": "quarterly", "served_by": "{{ .Hostname }}"}
+      delay: 2s±1s

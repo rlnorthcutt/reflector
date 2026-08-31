@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Config holds all v0.1 command-line configuration.
+// Config holds Reflector's command-line configuration.
 type Config struct {
 	Host             string
 	Port             int
@@ -17,6 +17,10 @@ type Config struct {
 	TCPPort        int
 	TCPBanner      bool
 	TCPIdleTimeout time.Duration
+
+	RoutesDir      string
+	Preset         string
+	StrictBuiltins bool
 }
 
 // Default TCP idle timeout, per PLAN.md.
@@ -35,6 +39,10 @@ func Parse(args []string) (Config, error) {
 	fs.IntVar(&cfg.TCPPort, "tcp-port", 0, "enable a raw TCP echo listener on this port (0 disables it)")
 	fs.BoolVar(&cfg.TCPBanner, "tcp-banner", false, "send an identity banner line on TCP connect before echoing")
 	fs.DurationVar(&cfg.TCPIdleTimeout, "tcp-idle-timeout", defaultTCPIdleTimeout, "close idle TCP echo connections after this duration")
+
+	fs.StringVar(&cfg.RoutesDir, "routes-dir", "routes.d", "directory of user-defined route YAML files")
+	fs.StringVar(&cfg.Preset, "preset", "", "comma-separated preset route packs to load (rest-api,flaky,slow,auth,big-payloads)")
+	fs.BoolVar(&cfg.StrictBuiltins, "strict-builtins", false, "never let user or preset routes shadow built-in routes")
 
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err

@@ -1,0 +1,17 @@
+# big-payloads preset: large JSON and binary responses, for throughput and
+# buffering demos.
+routes:
+  - path: /big/json
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body: |
+        {"served_by": "{{ .Hostname }}", "padding": "{{ repeat "0123456789" 10000 }}"}
+
+  - path: /big/binary
+    method: GET
+    response:
+      status: 200
+      body_file: payloads/blob.bin

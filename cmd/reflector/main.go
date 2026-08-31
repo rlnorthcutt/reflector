@@ -3,107 +3,45 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"log/slog"
-	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	"github.com/rlnorthcutt/reflector/internal/config"
-	"github.com/rlnorthcutt/reflector/internal/httpserver"
-	"github.com/rlnorthcutt/reflector/internal/identity"
-	"github.com/rlnorthcutt/reflector/internal/tcpecho"
 )
 
-// shutdownGracePeriod bounds how long in-flight requests get to finish
-// once shutdown starts.
-const shutdownGracePeriod = 10 * time.Second
-
 func main() {
-	if err := run(os.Args[1:]); err != nil {
+	if err := dispatch(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "reflector:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string) error {
-	cfg, err := config.Parse(args)
-	if err != nil {
-		return err
-	}
-
-	logLevel := slog.LevelInfo
-	if cfg.Quiet {
-		logLevel = slog.LevelWarn
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel}))
-
-	id := identity.New(cfg.HostnameOverride, cfg.Port)
-	logger.Info("starting reflector",
-		"hostname", id.Hostname,
-		"instance_id", id.InstanceID,
-		"port", id.Port,
-		"version", id.Version,
-	)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	httpAddr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
-	srv := httpserver.New(httpAddr, id, logger, cfg.Quiet)
-
-	errCh := make(chan error, 2)
-
-	go func() {
-		logger.Info("http server listening", "addr", httpAddr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- fmt.Errorf("http server: %w", err)
+// dispatch routes to a subcommand when args[0] names one; otherwise (no
+// args, or args[0] looks like a flag) it starts the server, preserving
+// v0.1's plain `reflector [flags]` invocation.
+func dispatch(args []string) error {
+	if len(args) > 0 {
+		switch args[0] {
+		case "validate":
+			return runValidate(args[1:])
+		case "routes":
+			return runRoutesCmd(args[1:])
+		case "init":
+			return runInit(args[1:])
+		case "-h", "--help", "help":
+			printUsage()
+			return nil
 		}
-	}()
-
-	var tcpListener net.Listener
-	if cfg.TCPPort != 0 {
-		tcpAddr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.TCPPort))
-		tcpListener, err = net.Listen("tcp", tcpAddr)
-		if err != nil {
-			return fmt.Errorf("tcp echo listener: %w", err)
-		}
-		echo := &tcpecho.Listener{
-			Banner:      cfg.TCPBanner,
-			IdleTimeout: cfg.TCPIdleTimeout,
-			Logger:      logger,
-		}
-		logger.Info("tcp echo listening", "addr", tcpAddr, "banner", cfg.TCPBanner)
-		go func() {
-			if err := echo.Serve(ctx, tcpListener, id, cfg.TCPPort); err != nil {
-				errCh <- fmt.Errorf("tcp echo listener: %w", err)
-			}
-		}()
 	}
+	return runServe(args)
+}
 
-	select {
-	case <-ctx.Done():
-		logger.Info("shutting down")
-	case err := <-errCh:
-		logger.Error("server error", "error", err)
-		stop()
-		return err
-	}
+func printUsage() {
+	fmt.Println(`reflector - identity-aware HTTP echo server for load-balancer demos
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGracePeriod)
-	defer cancel()
+Usage:
+  reflector [flags]              start the server
+  reflector validate [dir]       validate route files in dir (default routes.d)
+  reflector routes [flags]       print the resolved route table
+  reflector init [preset...]     extract preset route packs to routes.d/ and payloads/
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logger.Error("http server shutdown error", "error", err)
-	}
-	if tcpListener != nil {
-		_ = tcpListener.Close()
-	}
-
-	return nil
+See PLAN.md for the full flag reference.`)
 }

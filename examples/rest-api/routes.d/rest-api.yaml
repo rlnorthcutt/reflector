@@ -1,0 +1,43 @@
+# rest-api preset: a small fake JSON API with templated path params.
+routes:
+  - path: /api/users
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body_file: payloads/users.json
+
+  - path: /api/users/{id}
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "id": "{{ .PathParam "id" }}",
+          "served_by": "{{ .Hostname }}",
+          "requested_at": "{{ .Timestamp }}"
+        }
+
+  - path: /api/orders
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body_file: payloads/orders.json
+
+  - path: /api/orders/{id}
+    method: GET
+    response:
+      status: 200
+      headers:
+        Content-Type: application/json
+      body: |
+        {
+          "id": "{{ .PathParam "id" }}",
+          "served_by": "{{ .Hostname }}",
+          "requested_at": "{{ .Timestamp }}"
+        }

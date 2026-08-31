@@ -1,0 +1,22 @@
+# flaky preset: endpoints with error-rate injection, for retry/circuit-
+# breaker demos.
+routes:
+  - path: /flaky
+    method: GET
+    response:
+      status: 200
+      body: |
+        {"status": "ok", "served_by": "{{ .Hostname }}"}
+      failure:
+        rate: 0.3
+        status: 503
+
+  - path: /flaky/checkout
+    method: POST
+    response:
+      status: 200
+      body: |
+        {"order_id": "{{ uuid }}", "served_by": "{{ .Hostname }}"}
+      failure:
+        rate: 0.5
+        status: 500
