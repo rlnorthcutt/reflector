@@ -4,7 +4,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/rlnorthcutt/reflector/internal/identity"
 )
+
+func testID() identity.Identity {
+	return identity.Identity{Hostname: "web-2", InstanceID: "a1b2c3", Port: 8080, Version: "test"}
+}
 
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
@@ -67,6 +73,40 @@ func TestLoadRoutesUnknownPresetIsAnError(t *testing.T) {
 	rs := loadRoutes("routes.d", "not-a-real-preset")
 	if len(rs.Errors) != 1 {
 		t.Fatalf("Errors = %v, want 1 unknown-preset error", rs.Errors)
+	}
+}
+
+func TestBuildUserMuxEmptyReturnsNilMux(t *testing.T) {
+	chdir(t, t.TempDir())
+	mux, count, err := buildUserMux("routes.d", "", testID())
+	if err != nil {
+		t.Fatalf("buildUserMux: %v", err)
+	}
+	if mux != nil || count != 0 {
+		t.Errorf("mux=%v count=%d, want nil, 0 when no routes are loaded", mux, count)
+	}
+}
+
+func TestBuildUserMuxWithRoutes(t *testing.T) {
+	chdir(t, t.TempDir())
+	writeFile(t, "routes.d/x.yaml", "routes:\n  - path: /x\n    response:\n      body: hi\n")
+
+	mux, count, err := buildUserMux("routes.d", "", testID())
+	if err != nil {
+		t.Fatalf("buildUserMux: %v", err)
+	}
+	if mux == nil || count != 1 {
+		t.Fatalf("mux=%v count=%d, want a mux and count 1", mux, count)
+	}
+}
+
+func TestBuildUserMuxAggregatesLoadErrors(t *testing.T) {
+	chdir(t, t.TempDir())
+	writeFile(t, "routes.d/x.yaml", "routes:\n  - path: nope\n")
+
+	_, _, err := buildUserMux("routes.d", "", testID())
+	if err == nil {
+		t.Error("expected an error for an invalid route")
 	}
 }
 

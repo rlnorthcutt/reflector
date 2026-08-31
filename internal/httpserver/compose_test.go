@@ -17,7 +17,7 @@ func TestComposePopulatesPathValues(t *testing.T) {
 	})
 	builtin := http.NewServeMux()
 
-	handler := compose(builtin, user, false)
+	handler := compose(builtin, NewUserRoutes(user), false)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/users/42", nil))
 
@@ -36,7 +36,7 @@ func TestComposeUserRouteShadowsBuiltinByDefault(t *testing.T) {
 		_, _ = w.Write([]byte("builtin"))
 	})
 
-	handler := compose(builtin, user, false)
+	handler := compose(builtin, NewUserRoutes(user), false)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/headers", nil))
 
@@ -55,7 +55,7 @@ func TestComposeStrictBuiltinsWins(t *testing.T) {
 		_, _ = w.Write([]byte("builtin"))
 	})
 
-	handler := compose(builtin, user, true)
+	handler := compose(builtin, NewUserRoutes(user), true)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/headers", nil))
 
@@ -71,7 +71,22 @@ func TestComposeFallsThroughToSecondOnNoMatch(t *testing.T) {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	handler := compose(builtin, user, false)
+	handler := compose(builtin, NewUserRoutes(user), false)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+
+	if w.Body.String() != "ok" {
+		t.Errorf("body = %q, want %q", w.Body.String(), "ok")
+	}
+}
+
+func TestComposeHandlesNilUserRoutes(t *testing.T) {
+	builtin := http.NewServeMux()
+	builtin.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	handler := compose(builtin, nil, false)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
@@ -84,7 +99,7 @@ func TestComposeReturns404WhenNeitherMatches(t *testing.T) {
 	user := http.NewServeMux()
 	builtin := http.NewServeMux()
 
-	handler := compose(builtin, user, false)
+	handler := compose(builtin, NewUserRoutes(user), false)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/nope", nil))
 

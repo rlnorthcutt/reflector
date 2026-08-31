@@ -21,6 +21,17 @@ type Config struct {
 	RoutesDir      string
 	Preset         string
 	StrictBuiltins bool
+	Watch          bool
+
+	AdminPort   int
+	Capture     bool
+	CaptureMax  int
+	NoOverrides bool
+
+	CrtFile       string
+	KeyFile       string
+	TLSSelfSigned bool
+	H2C           bool
 }
 
 // Default TCP idle timeout, per PLAN.md.
@@ -43,6 +54,17 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&cfg.RoutesDir, "routes-dir", "routes.d", "directory of user-defined route YAML files")
 	fs.StringVar(&cfg.Preset, "preset", "", "comma-separated preset route packs to load (rest-api,flaky,slow,auth,big-payloads)")
 	fs.BoolVar(&cfg.StrictBuiltins, "strict-builtins", false, "never let user or preset routes shadow built-in routes")
+	fs.BoolVar(&cfg.Watch, "watch", false, "hot-reload route files on change")
+
+	fs.IntVar(&cfg.AdminPort, "admin-port", 8081, "port for the admin API")
+	fs.BoolVar(&cfg.Capture, "capture", false, "enable the request capture ring buffer")
+	fs.IntVar(&cfg.CaptureMax, "capture-max", 100, "maximum captured requests retained (FIFO eviction)")
+	fs.BoolVar(&cfg.NoOverrides, "no-overrides", false, "disable per-request overrides (_status/_delay/_body/_connection/_abort)")
+
+	fs.StringVar(&cfg.CrtFile, "crt", "", "TLS certificate file (enables HTTPS with --key)")
+	fs.StringVar(&cfg.KeyFile, "key", "", "TLS private key file (enables HTTPS with --crt)")
+	fs.BoolVar(&cfg.TLSSelfSigned, "tls-self-signed", false, "generate an ephemeral self-signed TLS certificate at startup")
+	fs.BoolVar(&cfg.H2C, "h2c", false, "enable cleartext HTTP/2 (h2c)")
 
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
@@ -53,6 +75,21 @@ func Parse(args []string) (Config, error) {
 	}
 	if cfg.TCPPort != 0 && (cfg.TCPPort < 1 || cfg.TCPPort > 65535) {
 		return Config{}, fmt.Errorf("invalid --tcp-port %d: must be between 1 and 65535", cfg.TCPPort)
+	}
+	if cfg.AdminPort < 1 || cfg.AdminPort > 65535 {
+		return Config{}, fmt.Errorf("invalid --admin-port %d: must be between 1 and 65535", cfg.AdminPort)
+	}
+	if cfg.CaptureMax < 1 {
+		return Config{}, fmt.Errorf("invalid --capture-max %d: must be at least 1", cfg.CaptureMax)
+	}
+	if (cfg.CrtFile == "") != (cfg.KeyFile == "") {
+		return Config{}, fmt.Errorf("--crt and --key must be given together")
+	}
+	if cfg.TLSSelfSigned && cfg.CrtFile != "" {
+		return Config{}, fmt.Errorf("--tls-self-signed and --crt/--key are mutually exclusive")
+	}
+	if cfg.H2C && (cfg.CrtFile != "" || cfg.TLSSelfSigned) {
+		return Config{}, fmt.Errorf("--h2c and TLS (--crt/--tls-self-signed) are mutually exclusive")
 	}
 
 	return cfg, nil

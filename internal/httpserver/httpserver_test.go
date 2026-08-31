@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rlnorthcutt/reflector/internal/health"
 	"github.com/rlnorthcutt/reflector/internal/identity"
 )
 
@@ -21,6 +22,7 @@ func testServer() *Server {
 			Version:    "test",
 		},
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Health: health.New(),
 	}
 }
 
@@ -224,6 +226,38 @@ func TestBytesRouteAcrossChunkBoundary(t *testing.T) {
 func TestSizeRouteRejectsTooLarge(t *testing.T) {
 	s := testServer()
 	w := doRequest(t, s.builtinMux(), http.MethodGet, "/size/99999999999999999999", false)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", w.Code)
+	}
+}
+
+func TestStreamBytesReturnsExactCount(t *testing.T) {
+	s := testServer()
+	w := doRequest(t, s.builtinMux(), http.MethodGet, "/stream-bytes/5000", false)
+	if len(w.Body.Bytes()) != 5000 {
+		t.Errorf("len(body) = %d, want 5000", len(w.Body.Bytes()))
+	}
+}
+
+func TestStreamBytesIsChunkedNotContentLength(t *testing.T) {
+	s := testServer()
+	w := doRequest(t, s.builtinMux(), http.MethodGet, "/stream-bytes/100", false)
+	if cl := w.Header().Get("Content-Length"); cl != "" {
+		t.Errorf("Content-Length = %q, want unset (chunked streaming)", cl)
+	}
+}
+
+func TestStreamBytesHonorsChunkSize(t *testing.T) {
+	s := testServer()
+	w := doRequest(t, s.builtinMux(), http.MethodGet, "/stream-bytes/100?chunk_size=10", false)
+	if len(w.Body.Bytes()) != 100 {
+		t.Errorf("len(body) = %d, want 100", len(w.Body.Bytes()))
+	}
+}
+
+func TestStreamBytesRejectsInvalidChunkSize(t *testing.T) {
+	s := testServer()
+	w := doRequest(t, s.builtinMux(), http.MethodGet, "/stream-bytes/100?chunk_size=0", false)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", w.Code)
 	}

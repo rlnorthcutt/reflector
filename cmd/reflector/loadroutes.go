@@ -1,12 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"strings"
 
 	presets "github.com/rlnorthcutt/reflector/examples"
+	"github.com/rlnorthcutt/reflector/internal/identity"
 	"github.com/rlnorthcutt/reflector/internal/routes"
 )
 
@@ -49,6 +52,25 @@ func loadRoutes(routesDir, presetList string) routeSet {
 
 	rs.Resolved = routes.Resolve(rs.User, rs.Presets)
 	return rs
+}
+
+// buildUserMux loads routes.d + presets and compiles them into a mux, in
+// one call. It's used at startup and by both the admin reload endpoint
+// and --watch, which all need the exact same "load, then build" sequence.
+// mux is nil (with count 0) when there are no user/preset routes at all.
+func buildUserMux(routesDir, presetList string, id identity.Identity) (mux *http.ServeMux, count int, err error) {
+	rs := loadRoutes(routesDir, presetList)
+	if len(rs.Errors) > 0 {
+		return nil, 0, errors.Join(rs.Errors...)
+	}
+	if len(rs.Resolved) == 0 {
+		return nil, 0, nil
+	}
+	mux, err = routes.BuildMux(rs.Resolved, id)
+	if err != nil {
+		return nil, 0, err
+	}
+	return mux, len(rs.Resolved), nil
 }
 
 func parsePresetNames(list string) []string {

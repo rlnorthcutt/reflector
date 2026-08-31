@@ -70,6 +70,57 @@ func (s *Server) handleBytes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleStreamBytes streams n bytes of random content in chunk_size
+// pieces (default and max chunkSize), deliberately without a
+// Content-Length so the response goes out chunked — for streaming-
+// consumer and backpressure demos, distinct from /bytes's fixed buffer.
+func (s *Server) handleStreamBytes(w http.ResponseWriter, r *http.Request) {
+	n, ok := parseByteCount(w, r.PathValue("n"))
+	if !ok {
+		return
+	}
+
+	size := chunkSize
+	if raw := r.URL.Query().Get("chunk_size"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v <= 0 {
+			http.Error(w, "invalid chunk_size", http.StatusBadRequest)
+			return
+		}
+		if v > chunkSize {
+			v = chunkSize
+		}
+		size = v
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+	flusher, _ := w.(http.Flusher)
+
+	buf := make([]byte, size)
+	remaining := n
+	for remaining > 0 {
+		this := int64(size)
+		if remaining < this {
+			this = remaining
+		}
+		_, _ = rand.Read(buf[:this])
+		if _, err := w.Write(buf[:this]); err != nil {
+			return
+		}
+		if flusher != nil {
+			flusher.Flush()
+		}
+		remaining -= this
+
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+		}
+	}
+}
+
 func parseByteCount(w http.ResponseWriter, raw string) (int64, bool) {
 	n, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || n < 0 {
