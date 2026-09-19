@@ -1,5 +1,6 @@
 // Command reflector is a single-binary HTTP echo server for load-balancer
-// demos and testing. See PLAN.md for the full design.
+// demos and testing. See PLAN.md for the full design; run with --help for
+// the flag reference.
 package main
 
 import (
@@ -43,8 +44,6 @@ Usage:
   reflector routes [flags]       print the resolved route table
   reflector init [preset...]     extract preset route packs to routes.d/ and payloads/
 
-License: MIT
-
-See https://github.com/rlnorthcutt/reflector for the full flag reference
-and license text.`)
+License: MIT, see LICENSE (bundled in release archives) or
+https://github.com/rlnorthcutt/reflector for the full text.`)
 }

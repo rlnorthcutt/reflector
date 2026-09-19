@@ -31,11 +31,12 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-    # goreleaser adds LICENSE*/README*/CHANGELOG* by default; "none*" is
-    # a glob that (deliberately) matches nothing, so the archive ends up
-    # containing just the binary. License info lives in --help instead.
+    # An explicit files list replaces goreleaser's LICENSE*/README*/CHANGELOG*
+    # default rather than adding to it, so LICENSE must be listed explicitly
+    # to keep shipping in the archive; PLAN.md and examples/** are dev-facing
+    # and are dropped from the release artifact.
     files:
-      - none*
+      - LICENSE*
 
 checksum:
   name_template: checksums.txt
