@@ -43,5 +43,8 @@ Usage:
   reflector routes [flags]       print the resolved route table
   reflector init [preset...]     extract preset route packs to routes.d/ and payloads/
 
-See PLAN.md for the full flag reference.`)
+License: MIT
+
+See https://github.com/rlnorthcutt/reflector for the full flag reference
+and license text.`)
 }
