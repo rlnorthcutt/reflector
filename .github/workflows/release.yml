@@ -30,8 +30,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required to push the Homebrew cask to rlnorthcutt/homebrew-tap.
-          # The default GITHUB_TOKEN can't write to a different repo, so
-          # this must be a personal access token with repo scope, added as
-          # a repository secret.
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

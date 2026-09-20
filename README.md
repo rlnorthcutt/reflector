@@ -10,8 +10,7 @@ See [PLAN.md](PLAN.md) for the full design and flag reference.
 ## Quickstart (60 seconds)
 
 ```sh
-brew install rlnorthcutt/tap/reflector
-reflector --preset rest-api
+docker run -p 8080:8080 -p 8081:8081 ghcr.io/rlnorthcutt/reflector:latest --preset rest-api
 ```
 
 ```sh
@@ -19,7 +18,7 @@ curl localhost:8080/                # identity + request envelope
 curl localhost:8080/api/users       # fake JSON API, from the rest-api preset
 ```
 
-No Homebrew? Any of these work the same way:
+Other ways to get it:
 
 ```sh
 # Prebuilt binary (linux/darwin/windows, amd64/arm64)
@@ -27,9 +26,6 @@ No Homebrew? Any of these work the same way:
 
 # Go toolchain
 go install github.com/rlnorthcutt/reflector/cmd/reflector@latest
-
-# Docker
-docker run -p 8080:8080 -p 8081:8081 ghcr.io/rlnorthcutt/reflector:latest --preset rest-api
 ```
 
 ## Cookbook

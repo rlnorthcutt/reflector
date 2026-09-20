@@ -232,10 +232,9 @@ Ship when a live failover demo runs end to end on it.
 Ship when a stranger is running it in under a minute.
 
 - goreleaser: linux/darwin/windows, amd64/arm64 release binaries.
-- Homebrew tap.
 - Docker: scratch-based multi-arch images; routes.d as a volume mount.
 - Kubernetes examples: Deployment + Service, ConfigMap-mounted routes, probe wiring.
-- README: 60-second quickstart (`brew install` → `reflector --preset rest-api`) plus a cookbook — one recipe per scenario (visible load balancing, failover, slow backend, flaky backend, fake API, verifying LB-injected headers), each built on a preset.
+- README: 60-second quickstart (`docker run` → `reflector --preset rest-api`) plus a cookbook — one recipe per scenario (visible load balancing, failover, slow backend, flaky backend, fake API, verifying LB-injected headers), each built on a preset.
 
 ## Out of scope for v1
 

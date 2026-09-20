@@ -52,18 +52,6 @@ changelog:
       - "^ci:"
       - "^chore:"
 
-homebrew_casks:
-  - name: reflector
-    repository:
-      owner: rlnorthcutt
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
-    binaries:
-      - reflector
-    homepage: "https://github.com/rlnorthcutt/reflector"
-    description: "Identity-aware HTTP echo server for load-balancer demos and testing"
-
 release:
   github:
     owner: rlnorthcutt
