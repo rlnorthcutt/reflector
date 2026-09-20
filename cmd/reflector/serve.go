@@ -31,6 +31,13 @@ import (
 const shutdownGracePeriod = 10 * time.Second
 
 func runServe(args []string) error {
+	return runServeCtx(context.Background(), args)
+}
+
+// runServeCtx is runServe with an injectable base context, so tests can
+// trigger graceful shutdown by cancellation instead of sending the
+// process a real signal.
+func runServeCtx(baseCtx context.Context, args []string) error {
 	cfg, err := config.Parse(args)
 	if err != nil {
 		return err
@@ -66,7 +73,7 @@ func runServe(args []string) error {
 		logger.Info("request capture enabled", "max", cfg.CaptureMax)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(baseCtx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	httpAddr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
