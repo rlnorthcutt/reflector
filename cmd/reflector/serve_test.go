@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rlnorthcutt/reflector/internal/adminserver"
 	"github.com/rlnorthcutt/reflector/internal/envelope"
 )
 
@@ -26,11 +27,19 @@ func freePort(t *testing.T) int {
 	return l.Addr().(*net.TCPAddr).Port
 }
 
-func waitForServer(t *testing.T, url string) {
+// waitForReady polls url until it accepts connections, or fails fast if
+// errCh receives runServeCtx's return value first (e.g. a bind error) so
+// a startup failure reports its real cause instead of a generic timeout.
+func waitForReady(t *testing.T, errCh <-chan error, url string) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	var lastErr error
 	for time.Now().Before(deadline) {
+		select {
+		case err := <-errCh:
+			t.Fatalf("server exited before becoming ready: %v", err)
+		default:
+		}
 		resp, err := http.Get(url)
 		if err == nil {
 			resp.Body.Close()
@@ -65,11 +74,13 @@ func TestRunServeEndToEnd(t *testing.T) {
 			"--port", fmt.Sprintf("%d", httpPort),
 			"--admin-port", fmt.Sprintf("%d", adminPort),
 			"--hostname-override", "test-instance",
+			"--preset", "rest-api",
 			"--quiet",
 		})
 	}()
 
-	waitForServer(t, httpBase+"/healthz")
+	waitForReady(t, errCh, httpBase+"/healthz")
+	waitForReady(t, errCh, adminBase+"/admin/routes")
 
 	t.Run("root envelope reports identity", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, httpBase+"/", nil)
@@ -129,14 +140,43 @@ func TestRunServeEndToEnd(t *testing.T) {
 		resp.Body.Close()
 	})
 
-	t.Run("admin routes lists built-ins", func(t *testing.T) {
+	t.Run("preset route is live", func(t *testing.T) {
+		resp, err := http.Get(httpBase + "/api/users")
+		if err != nil {
+			t.Fatalf("GET /api/users: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+		}
+	})
+
+	t.Run("admin routes lists the loaded preset", func(t *testing.T) {
 		resp, err := http.Get(adminBase + "/admin/routes")
 		if err != nil {
 			t.Fatalf("GET /admin/routes: %v", err)
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+		}
+
+		var list []adminserver.RouteInfo
+		if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+			t.Fatalf("decoding route list: %v", err)
+		}
+		if len(list) == 0 {
+			t.Fatal("route list is empty, want the rest-api preset's routes")
+		}
+		var found bool
+		for _, r := range list {
+			if r.Path == "/api/users" && r.Source == "preset:rest-api" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("route list %+v does not contain /api/users from preset:rest-api", list)
 		}
 	})
 
