@@ -6,6 +6,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/rlnorthcutt/reflector/internal/config"
 )
 
 func main() {
@@ -44,6 +46,9 @@ Usage:
   reflector routes [flags]       print the resolved route table
   reflector init [preset...]     extract preset route packs to routes.d/ and payloads/
 
+Flags (shared by the server and 'routes'):`)
+	config.Usage(os.Stdout)
+	fmt.Println(`
 License: MIT, see LICENSE (bundled in release archives) or
 https://github.com/rlnorthcutt/reflector for the full text.`)
 }

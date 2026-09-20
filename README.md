@@ -5,7 +5,7 @@ load-balancer demos and testing. Every response identifies the instance
 that served it, health can be toggled live to demonstrate failover, and
 request capture verifies exactly what a load balancer forwarded.
 
-See [PLAN.md](PLAN.md) for the full design and flag reference.
+See [PLAN.md](PLAN.md) for the full design; run `reflector --help` for the flag reference.
 
 ## Quickstart (60 seconds)
 

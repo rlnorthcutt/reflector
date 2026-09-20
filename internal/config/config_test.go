@@ -1,9 +1,22 @@
 package config
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestUsageListsFlags(t *testing.T) {
+	var buf strings.Builder
+	Usage(&buf)
+
+	out := buf.String()
+	for _, flag := range []string{"-port", "-admin-port", "-preset", "-tls-self-signed", "-h2c"} {
+		if !strings.Contains(out, flag) {
+			t.Errorf("Usage output missing %q:\n%s", flag, out)
+		}
+	}
+}
 
 func TestParseDefaults(t *testing.T) {
 	cfg, err := Parse(nil)

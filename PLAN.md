@@ -36,9 +36,10 @@ reflector (binary)
 │   └── embedded presets   route packs compiled in via go:embed
 ├── Template engine (Go text/template + helpers)
 ├── Request capture (bounded ring buffer, off by default)
-├── Admin API (/admin/*, separate port, default 8081)
-└── Config precedence: flags > env vars > config file
+└── Admin API (/admin/*, separate port, default 8081)
 ```
+
+Configuration is command-line flags only (`reflector --help` for the full list); there is no environment-variable or config-file layer.
 
 ## Response envelope
 
@@ -154,6 +155,8 @@ All routes honor overrides unless `--no-overrides` is set:
 - `?_status=503` or `X-Reflector-Status: 503`
 - `?_delay=2s` or `X-Reflector-Delay: 2s`
 - `?_body=...` or `X-Reflector-Body: ...`
+- `?_connection=close` or `X-Reflector-Connection: close` — force the response to close the connection (`Connection: close`), for testing load-balancer behavior on a dropped keep-alive.
+- `?_abort=1` or `X-Reflector-Abort: 1` — write a partial response and then close the connection mid-body, simulating a backend that dies while streaming.
 
 ## Request capture
 

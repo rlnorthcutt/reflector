@@ -4,6 +4,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -37,11 +38,12 @@ type Config struct {
 // Default TCP idle timeout, per PLAN.md.
 const defaultTCPIdleTimeout = 5 * time.Minute
 
-// Parse parses args (typically os.Args[1:]) into a Config.
-func Parse(args []string) (Config, error) {
+// newFlagSet builds the flag set shared by Parse and Usage, so the two
+// can never drift out of sync with each other.
+func newFlagSet() (*flag.FlagSet, *Config) {
 	fs := flag.NewFlagSet("reflector", flag.ContinueOnError)
 
-	cfg := Config{}
+	cfg := &Config{}
 	fs.StringVar(&cfg.Host, "host", "0.0.0.0", "address to listen on")
 	fs.IntVar(&cfg.Port, "port", 8080, "HTTP port to listen on")
 	fs.StringVar(&cfg.HostnameOverride, "hostname-override", "", "override the reported hostname")
@@ -66,6 +68,12 @@ func Parse(args []string) (Config, error) {
 	fs.BoolVar(&cfg.TLSSelfSigned, "tls-self-signed", false, "generate an ephemeral self-signed TLS certificate at startup")
 	fs.BoolVar(&cfg.H2C, "h2c", false, "enable cleartext HTTP/2 (h2c)")
 
+	return fs, cfg
+}
+
+// Parse parses args (typically os.Args[1:]) into a Config.
+func Parse(args []string) (Config, error) {
+	fs, cfg := newFlagSet()
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -92,5 +100,14 @@ func Parse(args []string) (Config, error) {
 		return Config{}, fmt.Errorf("--h2c and TLS (--crt/--tls-self-signed) are mutually exclusive")
 	}
 
-	return cfg, nil
+	return *cfg, nil
+}
+
+// Usage writes the flag reference (name, type, default, description) for
+// every flag Parse accepts to out. It's how `reflector --help` shows the
+// actual flags rather than just the subcommand summary.
+func Usage(out io.Writer) {
+	fs, _ := newFlagSet()
+	fs.SetOutput(out)
+	fs.PrintDefaults()
 }
