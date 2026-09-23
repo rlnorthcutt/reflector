@@ -5,7 +5,6 @@ package tcpecho
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"time"
@@ -26,7 +25,7 @@ type Listener struct {
 // bannerLine builds the identity line sent on connect when Banner is
 // enabled, e.g. "reflector host=web-2 instance=a1b2c3 port=9000".
 func bannerLine(id identity.Identity, port int) string {
-	return fmt.Sprintf("reflector host=%s instance=%s port=%d\n", id.Hostname, id.InstanceID, port)
+	return id.Banner(port) + "\n"
 }
 
 // Serve accepts connections on ln until ctx is cancelled, echoing bytes on

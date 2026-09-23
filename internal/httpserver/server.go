@@ -3,7 +3,10 @@
 package httpserver
 
 import (
+	"bufio"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -88,6 +91,7 @@ func BuiltinPatterns() []string {
 		"/basic-auth/{user}/{pass}", "/bearer",
 		"/cookies", "/cookies/set", "/cookies/delete",
 		"/gzip", "/deflate",
+		"/ws",
 		"/healthz", "/readyz",
 	}
 }
@@ -120,6 +124,8 @@ func (s *Server) builtinMux() *http.ServeMux {
 
 	mux.HandleFunc("/gzip", s.handleGzip)
 	mux.HandleFunc("/deflate", s.handleDeflate)
+
+	mux.HandleFunc("/ws", s.handleWS)
 
 	mux.HandleFunc("/healthz", s.handleHealthz)
 	mux.HandleFunc("/readyz", s.handleReadyz)
@@ -186,4 +192,18 @@ type statusRecorder struct {
 func (r *statusRecorder) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
+}
+
+// Hijack forwards to the underlying ResponseWriter's Hijack. Without this,
+// handlers that take over the connection (like /ws) would lose hijacking
+// support whenever access logging is enabled: embedding an interface value
+// only promotes the methods declared on that interface's static type
+// (http.ResponseWriter), not Hijack, even though the concrete value
+// underneath satisfies http.Hijacker too.
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
+	}
+	return hj.Hijack()
 }

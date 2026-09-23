@@ -29,6 +29,7 @@ reflector (binary)
 │   ├── Synthetic:   /size/{bytes}  /bytes/{n}  /json  /xml  /html
 │   ├── Auth:        /basic-auth/{user}/{pass}  /bearer  /cookies*
 │   ├── Encoding:    /gzip  /deflate
+│   ├── WebSocket:   /ws  (RFC 6455 echo, hand-rolled over http.Hijacker)
 │   └── Probes:      /healthz  /readyz
 ├── Route engine
 │   ├── routes.d/*.yaml    user route definitions
@@ -81,11 +82,13 @@ Rules: headers and query params are multi-value arrays (no silent loss of duplic
 
 **Encoding.** `/gzip` and `/deflate` negotiate and return compressed responses using pooled writers with retention caps.
 
+**WebSocket.** `/ws` completes an RFC 6455 handshake and echoes text and binary frames verbatim, answering ping with pong and closing cleanly — a stand-in backend for the one non-HTTP protocol demo HAProxy configs commonly get wrong (`timeout tunnel`, upgrade handling). See [WebSocket echo mode](#websocket-echo-mode).
+
 **Probes.** `/healthz` (liveness) and `/readyz` (readiness), both toggleable through the admin API.
 
 ## User-defined routes
 
-Route files in `routes.d/` are loaded at startup. Route precedence on path conflict: user routes in `routes.d/` > loaded presets > built-ins. Within `routes.d/`, later files win. User routes may shadow any built-in except `/admin/*`, `/healthz`, and `/readyz`; `--strict-builtins` locks all built-ins.
+Route files in `routes.d/` are loaded at startup. Route precedence on path conflict: user routes in `routes.d/` > loaded presets > built-ins. Within `routes.d/`, later files win. User routes may shadow any built-in except `/admin/*`, `/healthz`, `/readyz`, and `/ws`; `--strict-builtins` locks all built-ins.
 
 ```yaml
 # routes.d/users-api.yaml
@@ -181,6 +184,16 @@ Served on its own port (`--admin-port`, default 8081) so it can be firewalled se
 - HTTP/2 (h2) negotiated via ALPN whenever TLS is active.
 - `--h2c` enables cleartext HTTP/2, for topologies where TLS terminates at the load balancer.
 
+## WebSocket echo mode
+
+`GET /ws` upgrades to WebSocket and echoes frames back, for putting a non-HTTP protocol behind HAProxy without a second demo tool.
+
+- Hand-rolled RFC 6455 over `http.Hijacker` — no new dependency, same stdlib-only ethos as the rest of the core.
+- Text and binary frames are echoed verbatim (including the FIN bit, so fragmented messages pass through frame-by-frame with no reassembly); ping gets pong; close is answered in kind.
+- On connect, one text frame carries the identity banner (`reflector host=web-2 instance=a1b2c3 port=9000`) — the WebSocket analogue of `--tcp-banner`, so L7 round-robin and stickiness stay visible over a persistent connection.
+- A non-upgrade request gets `426 Upgrade Required` instead of hanging.
+- Good for exercising `timeout tunnel`, `option http-server-close`, and upgrade-handling config, which is where HAProxy WebSocket configs are subtly wrong most often.
+
 ## TCP echo mode
 
 `--tcp-port {port}` starts a raw TCP echo listener alongside the HTTP server, for L4 load balancing demos and connection-level testing.
@@ -241,7 +254,7 @@ Ship when a stranger is running it in under a minute.
 
 ## Out of scope for v1
 
-SSE/JSON Lines streaming, WebSocket echo, synthetic image generation, multi-bin request capture with TTLs, Brotli, response sequencing, UDP listeners, gRPC, Prometheus metrics, web dashboard. Any of these can be added later without structural change; none block the core use case.
+SSE/JSON Lines streaming, synthetic image generation, multi-bin request capture with TTLs, Brotli, response sequencing, UDP listeners, gRPC, Prometheus metrics, web dashboard. Any of these can be added later without structural change; none block the core use case.
 
 ## References
 

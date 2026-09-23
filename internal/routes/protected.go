@@ -6,7 +6,7 @@ import "strings"
 // and preset routes may never shadow, regardless of --strict-builtins.
 func IsProtectedPath(path string) bool {
 	switch path {
-	case "/healthz", "/readyz", "/admin":
+	case "/healthz", "/readyz", "/ws", "/admin":
 		return true
 	}
 	return strings.HasPrefix(path, "/admin/")

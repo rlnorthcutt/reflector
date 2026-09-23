@@ -66,7 +66,11 @@ func withOverrides(next http.Handler) http.Handler {
 		statusOverride, hasStatus := overrideInt(r, "_status", "X-Reflector-Status")
 		bodyOverride, hasBody := overrideValue(r, "_body", "X-Reflector-Body")
 
-		if !hasStatus && !hasBody {
+		// Status/body overrides require buffering the full response,
+		// which is incompatible with a connection handed off via
+		// Hijack — so a WebSocket upgrade always passes through
+		// untouched rather than 500ing on an unsupported hijack.
+		if (!hasStatus && !hasBody) || isWebSocketUpgrade(r) {
 			next.ServeHTTP(w, r)
 			return
 		}

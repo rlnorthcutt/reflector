@@ -6,6 +6,7 @@ package identity
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"os"
 )
 
@@ -39,6 +40,15 @@ func New(hostnameOverride string, port int) Identity {
 		Port:       port,
 		Version:    Version,
 	}
+}
+
+// Banner returns the identity line shared by the TCP echo and WebSocket
+// banners: "reflector host=<hostname> instance=<instance> port=<port>".
+// port is taken as a parameter, not id.Port, because a demo backend can
+// expose a banner for a listener (e.g. --tcp-port) other than its main
+// identity port.
+func (id Identity) Banner(port int) string {
+	return fmt.Sprintf("reflector host=%s instance=%s port=%d", id.Hostname, id.InstanceID, port)
 }
 
 // newInstanceID returns a short random hex identifier unique to this process

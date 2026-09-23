@@ -147,6 +147,36 @@ Look for `X-Forwarded-For` (from `option forwardfor`) and `X-Demo-Backend`
 (from the explicit `set-header`) in the response — if they're not there,
 they never left HAProxy.
 
+### Protocol demo: WebSocket
+
+`/ws` is a built-in RFC 6455 echo endpoint, for putting a non-HTTP protocol
+behind HAProxy without reaching for a second tool. It echoes text/binary
+frames and answers ping with pong; on connect it sends an identity banner
+frame so round-robin and stickiness stay visible over the long-lived
+connection:
+
+```haproxy
+frontend fe_demo
+    bind *:8080
+    default_backend be_reflector
+
+backend be_reflector
+    timeout tunnel 1h                 # keeps the upgraded connection alive
+    option http-server-close
+    server web-1 127.0.0.1:9001 check
+```
+
+```sh
+reflector --port 9001   # matches the backend server line above
+# any RFC 6455 client works, e.g. websocat, through HAProxy on :8080:
+websocat ws://localhost:8080/ws
+```
+
+The first message received is the banner (`reflector host=... instance=...
+port=...`); anything typed after that echoes straight back. Good for
+demoing exactly what `timeout tunnel` and upgrade handling do to a
+long-lived connection under HAProxy.
+
 ## Request capture
 
 Turn on `--capture` and read back exactly what reached the backend —
