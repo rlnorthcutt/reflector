@@ -26,7 +26,7 @@ reflector (binary)
 ├── Built-in routes (compiled in)
 │   ├── Inspection:  /  /echo  /anything/*  /headers  /ip  /user-agent
 │   ├── Simulation:  /status/{code}  /delay/{dur}  /drip  /stream-bytes/{n}
-│   ├── Synthetic:   /size/{bytes}  /bytes/{n}  /json  /xml  /html
+│   ├── Synthetic:   /size/{bytes}  /bytes/{n}  /file/{n}.{ext}
 │   ├── Auth:        /basic-auth/{user}/{pass}  /bearer  /cookies*
 │   ├── Encoding:    /gzip  /deflate
 │   ├── WebSocket:   /ws  (RFC 6455 echo, hand-rolled over http.Hijacker)
@@ -76,7 +76,7 @@ Rules: headers and query params are multi-value arrays (no silent loss of duplic
 
 **Simulation.** `/status/{code}` responds instantly with the given status. `/delay/{dur}` waits before responding; implemented with `time.NewTimer` + `select` on `r.Context().Done()` so disconnecting clients release resources immediately. `/drip?numbytes=&duration=&delay=&code=&jitter=` trickles bytes over a duration for slow-backend, timeout, and retry-policy demos. `/stream-bytes/{n}?chunk_size=` streams chunked binary.
 
-**Synthetic payloads.** `/size/{bytes}` and `/bytes/{n}?seed=` generate exact-size responses (zero-filled, or deterministic pseudo-random when seeded), streamed from shared static buffer pages via `io.CopyN`. `/json`, `/xml`, `/html` serve small structural fixtures.
+**Synthetic payloads.** `/size/{bytes}` and `/bytes/{n}?seed=` generate exact-size responses (zero-filled, or deterministic pseudo-random when seeded), streamed from shared static buffer pages via `io.CopyN`. `/file/{n}.{ext}` is the same zero-filled content wrapped as a named, typed download — `/file/1024.jpg` sets `Content-Type: image/jpeg` and `Content-Disposition: attachment; filename="1024.jpg"` from a small built-in extension table (falling back to `application/octet-stream` for anything unrecognized); the bytes aren't a valid file of that format, just the right envelope for download/size/timeout demos.
 
 **Auth.** `/basic-auth/{user}/{pass}` issues a 401 challenge and validates credentials. `/bearer` validates presence of a bearer token. `/cookies`, `/cookies/set`, `/cookies/delete` support cookie round-trips, including load balancer persistence-cookie demos.
 

@@ -87,7 +87,7 @@ func BuiltinPatterns() []string {
 		"/", "/echo", "/echo/*", "/anything", "/anything/*",
 		"/headers", "/ip", "/user-agent",
 		"/status/{code}", "/delay/{duration}", "/drip",
-		"/size/{bytes}", "/bytes/{n}", "/stream-bytes/{n}",
+		"/size/{bytes}", "/bytes/{n}", "/stream-bytes/{n}", "/file/{bytes}.{ext}",
 		"/basic-auth/{user}/{pass}", "/bearer",
 		"/cookies", "/cookies/set", "/cookies/delete",
 		"/gzip", "/deflate",
@@ -115,6 +115,7 @@ func (s *Server) builtinMux() *http.ServeMux {
 	mux.HandleFunc("/size/{bytes}", s.handleSize)
 	mux.HandleFunc("/bytes/{n}", s.handleBytes)
 	mux.HandleFunc("/stream-bytes/{n}", s.handleStreamBytes)
+	mux.HandleFunc("/file/{spec}", s.handleFile)
 
 	mux.HandleFunc("/basic-auth/{user}/{pass}", s.handleBasicAuth)
 	mux.HandleFunc("/bearer", s.handleBearer)

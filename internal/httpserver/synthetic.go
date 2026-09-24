@@ -20,18 +20,22 @@ const MaxSyntheticBytes = 1 << 30 // 1 GiB
 // /size requests to avoid per-request allocation proportional to size.
 var zeroChunk = make([]byte, chunkSize)
 
+// zeroChunkNext is the writeExactBytes callback shared by every route that
+// serves zero-filled content.
+func zeroChunkNext(remaining int64) []byte {
+	if remaining < chunkSize {
+		return zeroChunk[:remaining]
+	}
+	return zeroChunk
+}
+
 // handleSize streams exactly n zero-filled bytes.
 func (s *Server) handleSize(w http.ResponseWriter, r *http.Request) {
 	n, ok := parseByteCount(w, r.PathValue("bytes"))
 	if !ok {
 		return
 	}
-	writeExactBytes(w, n, func(remaining int64) []byte {
-		if remaining < chunkSize {
-			return zeroChunk[:remaining]
-		}
-		return zeroChunk
-	})
+	writeExactBytes(w, n, "application/octet-stream", zeroChunkNext)
 }
 
 // handleBytes streams exactly n bytes: zero-filled by default, or
@@ -44,12 +48,7 @@ func (s *Server) handleBytes(w http.ResponseWriter, r *http.Request) {
 
 	seedParam := r.URL.Query().Get("seed")
 	if seedParam == "" {
-		writeExactBytes(w, n, func(remaining int64) []byte {
-			if remaining < chunkSize {
-				return zeroChunk[:remaining]
-			}
-			return zeroChunk
-		})
+		writeExactBytes(w, n, "application/octet-stream", zeroChunkNext)
 		return
 	}
 
@@ -60,7 +59,7 @@ func (s *Server) handleBytes(w http.ResponseWriter, r *http.Request) {
 	}
 	rng := rand.New(rand.NewSource(seed))
 	buf := make([]byte, chunkSize)
-	writeExactBytes(w, n, func(remaining int64) []byte {
+	writeExactBytes(w, n, "application/octet-stream", func(remaining int64) []byte {
 		size := int64(chunkSize)
 		if remaining < size {
 			size = remaining
@@ -134,10 +133,10 @@ func parseByteCount(w http.ResponseWriter, raw string) (int64, bool) {
 	return n, true
 }
 
-// writeExactBytes streams exactly n bytes to w, requesting each chunk from
-// next (which is handed the number of bytes remaining).
-func writeExactBytes(w http.ResponseWriter, n int64, next func(remaining int64) []byte) {
-	w.Header().Set("Content-Type", "application/octet-stream")
+// writeExactBytes streams exactly n bytes to w as contentType, requesting
+// each chunk from next (which is handed the number of bytes remaining).
+func writeExactBytes(w http.ResponseWriter, n int64, contentType string, next func(remaining int64) []byte) {
+	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", strconv.FormatInt(n, 10))
 	w.WriteHeader(http.StatusOK)
 
