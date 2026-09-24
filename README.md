@@ -33,7 +33,7 @@ go install github.com/rlnorthcutt/reflector/cmd/reflector@latest
 Each recipe builds on a preset — `reflector init <preset>` extracts its
 route files to `routes.d/` and `payloads/` if you want to edit them.
 
-### Visible load balancing
+### -> Visible load balancing
 
 Run three instances and put HAProxy in front. Every response's
 `server.hostname`/`instance_id` (or the plaintext `Hostname:`/`InstanceID:`
@@ -63,7 +63,9 @@ backend be_reflector
 for i in 1 2 3 4 5 6; do curl -s localhost:8080/ | grep Hostname; done
 ```
 
-### Failover
+---
+
+### -> Failover
 
 Using the three instances and HAProxy config above, fail one out without
 touching HAProxy at all — flip it via its admin API, which is exactly
@@ -85,7 +87,9 @@ Bring it back with:
 curl -X POST localhost:9081/admin/health/up
 ```
 
-### Slow backend
+---
+
+### -> Slow backend
 
 ```sh
 reflector --preset slow
@@ -96,7 +100,9 @@ curl -w '\n%{time_total}s\n' localhost:8080/slow-api/report   # ~2s ± 1s jitter
 Useful for tuning HAProxy `timeout server`/`timeout connect`, or for
 demoing what a slow upstream does to client-perceived latency.
 
-### Flaky backend
+---
+
+### -> Flaky backend
 
 ```sh
 reflector --preset flaky
@@ -108,7 +114,9 @@ echo
 ~50% with a 500. Good for demoing HAProxy retry policies
 (`retry-on`, `retries`) or a client's own backoff logic.
 
-### Fake API
+---
+
+### -> Fake API
 
 ```sh
 reflector --preset rest-api
@@ -122,7 +130,9 @@ need "a backend" without writing one. Extract it with
 `reflector init rest-api` and edit `routes.d/rest-api.yaml` to reshape it
 into your own fake service.
 
-### Verifying LB-injected headers
+---
+
+### -> Verifying LB-injected headers
 
 Confirm exactly what HAProxy adds to (or rewrites on) a request before it
 reaches the backend — `/headers` reflects precisely what arrived, with no
@@ -147,7 +157,9 @@ Look for `X-Forwarded-For` (from `option forwardfor`) and `X-Demo-Backend`
 (from the explicit `set-header`) in the response — if they're not there,
 they never left HAProxy.
 
-### Protocol demo: WebSocket
+---
+
+### -> Protocol demo: WebSocket
 
 `/ws` is a built-in RFC 6455 echo endpoint, for putting a non-HTTP protocol
 behind HAProxy without reaching for a second tool. It echoes text/binary
@@ -176,6 +188,8 @@ The first message received is the banner (`reflector host=... instance=...
 port=...`); anything typed after that echoes straight back. Good for
 demoing exactly what `timeout tunnel` and upgrade handling do to a
 long-lived connection under HAProxy.
+
+---
 
 ## Request capture
 
